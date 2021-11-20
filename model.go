@@ -17,15 +17,16 @@ type Event struct {
 type eventHandler struct {
     sync.Mutex          `json:"-"`
     Store       []Event `json:"store"`
-    storeFile   string  `json:"-"`
+    StoreFile   string  `json:"-"`
+    Password    string  `json:"-"`
 }
 
 func newEventHandler() *eventHandler {
     var e eventHandler
-    e.storeFile = "eventStore.json"
+    e.StoreFile = "eventStore.json"
 
     // Open or create json "storeFile" if non-existent
-    f, err := os.OpenFile(e.storeFile, os.O_CREATE, 0644)
+    f, err := os.OpenFile(e.StoreFile, os.O_CREATE, 0644)
     if err != nil {
         log.Println(err)
     }
@@ -33,6 +34,13 @@ func newEventHandler() *eventHandler {
 
     byteValue, err := ioutil.ReadAll(f)
     json.Unmarshal(byteValue, &e)
+
+    // Set admin password needed to create new events
+    password := os.Getenv("ADMIN_PASSWORD")
+    if password == "" {
+        panic("required env var ADMIN_PASSWORD not set")
+    }
+    e.Password = password
 
     return &e
 }

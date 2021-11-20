@@ -4,6 +4,8 @@ import(
     "net/http"
     "encoding/json"
     "log"
+    "io/ioutil"
+    "time"
 )
 
 // Wrapper around handlers that deals with errors
@@ -39,7 +41,7 @@ func (fn rootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h *eventHandler) EventsHandler(w http.ResponseWriter, r *http.Request) error {
+func (h *eventHandler) Events(w http.ResponseWriter, r *http.Request) error {
     switch r.Method {
     case http.MethodGet:
         return h.Index(w, r)
@@ -60,11 +62,9 @@ func (h *eventHandler) Index(w http.ResponseWriter, r *http.Request) error {
 
     jsonData, err := json.Marshal(h.Store)
     if err != nil {
-        log.Println(err)
-        w.WriteHeader(http.StatusInternalServerError)
         return newHTTPError(
             err,
-            "error fetching event data.",
+            "error fetching event data",
             http.StatusInternalServerError,
         )
     }
@@ -76,15 +76,63 @@ func (h *eventHandler) Index(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
-    w.Write([]byte("hello lovely :)"))
+    user, pass, ok := r.BasicAuth()
+    if !ok || user != "hubdc-admin" || pass != h.Password {
+        return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
+    }
+
+    bodyBytes, err := ioutil.ReadAll(r.Body)
+    defer r.Body.Close()
+    if err != nil {
+        return newHTTPError(err, "error reading request", http.StatusInternalServerError)
+    }
+
+    ct := r.Header.Get("content-type")
+    if ct != "application/json" {
+        return newHTTPError(err, "need content-type: application/json", http.StatusBadRequest)
+    }
+
+    var reqEvent Event
+    err = json.Unmarshal(bodyBytes, &reqEvent)
+    if err != nil {
+        return newHTTPError(err, "error parsing json", http.StatusBadRequest)
+    }
+
+    // Making sure all fields are entered
+    missingFields := make([]string, 0)
+    if reqEvent.When == "" {
+        missingFields = append(missingFields, "when")
+    }
+    if reqEvent.Where == "" {
+        missingFields = append(missingFields, "where")
+    }
+    if reqEvent.What == "" {
+        missingFields = append(missingFields, "what")
+    }
+    if len(missingFields) != 0 {
+        errString := "missing json fields: "
+        for _, v := range missingFields {
+            errString += v + " "
+        }
+        return newHTTPError(nil, errString, http.StatusBadRequest)
+    }
+
+    // Test whether "when" is a correct format
+    _, err = time.Parse("15:04 02-01-06", reqEvent.When)
+    if err != nil {
+        return newHTTPError(err, "time not in '15:04 02-01-06' format", http.StatusBadRequest)
+    }
+
+    h.Lock()
+    defer h.Unlock()
+    h.Store = append(h.Store, reqEvent)
     return nil
 }
 
 func main() {
     h := newEventHandler()
-
     // Converting our eventHandler methods to rootHandler functions
     // to separate error handling with HTTP handling
-    http.Handle("/events", rootHandler(h.EventsHandler))
+    http.Handle("/events", rootHandler(h.Events))
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
