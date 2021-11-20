@@ -117,22 +117,38 @@ func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
         return newHTTPError(nil, errString, http.StatusBadRequest)
     }
 
-    // Test whether "when" is a correct format
+    // Test whether "when" is in the correct format
     _, err = time.Parse("15:04 02-01-06", reqEvent.When)
     if err != nil {
         return newHTTPError(err, "time not in '15:04 02-01-06' format", http.StatusBadRequest)
     }
 
+    // Add good data to the store
     h.Lock()
     defer h.Unlock()
     h.Store = append(h.Store, reqEvent)
     return nil
 }
 
+func (h *eventHandler) ServeUpcoming(w http.ResponseWriter, r *http.Request) error {
+    if r.Method != http.MethodGet {
+        return newHTTPError(nil, "method not allowed", http.StatusMethodNotAllowed)
+    }
+
+    jsonData, err := json.Marshal(h.Upcoming())
+    if err != nil {
+        return newHTTPError(err, "error fetching event data", http.StatusInternalServerError)
+    }
+
+    w.Header().Add("content-type", "application/json; charset=utf-8")
+    w.WriteHeader(http.StatusOK)
+    w.Write(jsonData)
+    return nil
+}
+
 func main() {
     h := newEventHandler()
-    // Converting our eventHandler methods to rootHandler functions
-    // to separate error handling with HTTP handling
     http.Handle("/events", rootHandler(h.Events))
+    http.Handle("/events/upcoming", rootHandler(h.ServeUpcoming))
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
