@@ -6,6 +6,7 @@ import(
     "log"
     "io/ioutil"
     "time"
+    "strconv"
 )
 
 // Wrapper around handlers that deals with errors
@@ -123,10 +124,19 @@ func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
         return newHTTPError(err, "time not in '15:04 02-01-06' format", http.StatusBadRequest)
     }
 
+    reqEvent.Id = strconv.Itoa(len(h.Store))
+
     // Add good data to the store
     h.Lock()
     defer h.Unlock()
     h.Store = append(h.Store, reqEvent)
+
+    // Serialise Baby
+    err = h.SerialiseBaby()
+    if err != nil {
+        return err
+    }
+
     return nil
 }
 

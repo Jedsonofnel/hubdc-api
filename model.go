@@ -7,9 +7,11 @@ import (
     "io/ioutil"
     "sync"
     "time"
+    "net/http"
 )
 
 type Event struct {
+    Id      string  `json:"id"`
     When    string  `json:"when"`
     Where   string  `json:"where"`
     What    string  `json:"what"`
@@ -54,6 +56,18 @@ func (e *Event) Time() time.Time {
     return t
 }
 
+func (h *eventHandler) SerialiseBaby() error {
+    writeBytes, err := json.MarshalIndent(h, "", " ")
+    if err != nil {
+        return newHTTPError(
+            err,
+            "error writing db to file",
+            http.StatusInternalServerError,
+        )
+    }
+    os.WriteFile(h.StoreFile, writeBytes, 0644)
+    return nil
+}
 // Return a slice of the next three events in order of soon -> latest
 func (h *eventHandler) Upcoming() []Event {
     var next Event
