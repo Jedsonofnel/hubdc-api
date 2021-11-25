@@ -124,3 +124,36 @@ func (h *eventHandler) FindWithID(id string) (Event, bool) {
     }
     return Event{}, false
 }
+
+func validEvent(reqEvent Event) (error, bool) {
+    // Making sure all fields are entered
+    missingFields := make([]string, 0)
+    if reqEvent.When == "" {
+        missingFields = append(missingFields, "when")
+    }
+    if reqEvent.Where == "" {
+        missingFields = append(missingFields, "where")
+    }
+    if reqEvent.What == "" {
+        missingFields = append(missingFields, "what")
+    }
+    if len(missingFields) != 0 {
+        errString := "missing json fields: "
+        for _, v := range missingFields {
+            errString += v + " "
+        }
+        return newHTTPError(nil, errString, http.StatusBadRequest), false
+    }
+
+    // Test whether "when" is in the correct format
+    _, err := time.Parse("15:04 02-01-06", reqEvent.When)
+    if err != nil {
+        return newHTTPError(
+            err,
+            "time not in '15:04 02-01-06' format",
+            http.StatusBadRequest,
+        ),
+        false
+    }
+    return nil, true
+}
