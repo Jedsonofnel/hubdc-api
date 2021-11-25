@@ -115,3 +115,12 @@ func (h *eventHandler) Upcoming() []Event {
     }
     return upcoming
 }
+
+func (h *eventHandler) FindWithID(id string) (Event, bool) {
+    for _, e := range h.Store {
+        if id == e.Id {
+            return e, true
+        }
+    }
+    return Event{}, false
+}

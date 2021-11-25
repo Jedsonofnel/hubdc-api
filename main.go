@@ -7,6 +7,8 @@ import(
     "io/ioutil"
     "time"
     "strconv"
+    "strings"
+    "fmt"
 )
 
 // Wrapper around handlers that deals with errors
@@ -24,13 +26,13 @@ func (fn rootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     // Check if it is a ClientError
     clientError, ok := err.(ClientError)
     if !ok {
-        w.WriteHeader(500)
+        w.WriteHeader(http.StatusInternalServerError)
         return
     }
     body, err := clientError.ResponseBody()
     if err != nil {
         log.Printf("An error occured: %v", err)
-        w.WriteHeader(500)
+        w.WriteHeader(http.StatusInternalServerError)
         return
     }
     status, headers := clientError.ResponseHeaders()
@@ -140,6 +142,51 @@ func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
     return nil
 }
 
+func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {
+    switch r.Method {
+    case http.MethodGet:
+        return h.Show(w, r)
+    default:
+        return newHTTPError(
+            nil,
+            "method not allowed",
+            http.StatusMethodNotAllowed,
+        )
+    }
+}
+func (h *eventHandler) Show(w http.ResponseWriter, r *http.Request) error {
+    parts := strings.Split(r.URL.String(), "/")
+    if len(parts) != 3 {
+        return newHTTPError(nil, "invalid url", http.StatusNotFound)
+    }
+    showID := parts[2]
+
+    h.Lock()
+    h.Unlock()
+    event, ok := h.FindWithID(showID)
+    if !ok {
+        return newHTTPError(
+            nil,
+            fmt.Sprintf("event '%v' not found", showID),
+            http.StatusNotFound,
+        )
+    }
+
+    jsonData, err := json.Marshal(event)
+    if err != nil {
+        return newHTTPError(
+            err,
+            "error parsing event data",
+            http.StatusInternalServerError,
+        )
+    }
+
+    w.Header().Add("content-type", "application/json; charset=utf-8")
+    w.WriteHeader(http.StatusOK)
+    w.Write(jsonData)
+    return nil
+}
+
 func (h *eventHandler) ServeUpcoming(w http.ResponseWriter, r *http.Request) error {
     if r.Method != http.MethodGet {
         return newHTTPError(nil, "method not allowed", http.StatusMethodNotAllowed)
@@ -159,6 +206,7 @@ func (h *eventHandler) ServeUpcoming(w http.ResponseWriter, r *http.Request) err
 func main() {
     h := newEventHandler()
     http.Handle("/events", rootHandler(h.Events))
+    http.Handle("/event/", rootHandler(h.Event))
     http.Handle("/events/upcoming", rootHandler(h.ServeUpcoming))
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
