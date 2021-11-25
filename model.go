@@ -8,6 +8,7 @@ import (
     "sync"
     "time"
     "net/http"
+    "strconv"
 )
 
 type Event struct {
@@ -56,6 +57,16 @@ func (e *Event) Time() time.Time {
     return t
 }
 
+func (h *eventHandler) GetBestID() string {
+    lowestId := 0
+    for _, e := range h.Store {
+        index, _ := strconv.Atoi(e.Id)
+        if index <= lowestId {
+            lowestId = index + 1
+        }
+    }
+    return strconv.Itoa(lowestId)
+}
 func (h *eventHandler) SerialiseBaby() error {
     writeBytes, err := json.MarshalIndent(h, "", " ")
     if err != nil {
@@ -68,6 +79,7 @@ func (h *eventHandler) SerialiseBaby() error {
     os.WriteFile(h.StoreFile, writeBytes, 0644)
     return nil
 }
+
 // Return a slice of the next three events in order of soon -> latest
 func (h *eventHandler) Upcoming() []Event {
     var next Event
@@ -116,13 +128,13 @@ func (h *eventHandler) Upcoming() []Event {
     return upcoming
 }
 
-func (h *eventHandler) FindWithID(id string) (Event, bool) {
-    for _, e := range h.Store {
+func (h *eventHandler) GetEventIndex(id string) (int, bool) {
+    for i, e := range h.Store {
         if id == e.Id {
-            return e, true
+            return i, true
         }
     }
-    return Event{}, false
+    return 0, false
 }
 
 func validEvent(reqEvent Event) (error, bool) {

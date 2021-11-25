@@ -5,7 +5,6 @@ import(
     "encoding/json"
     "log"
     "io/ioutil"
-    "strconv"
     "strings"
     "fmt"
 )
@@ -103,7 +102,7 @@ func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
         return err
     }
 
-    reqEvent.Id = strconv.Itoa(len(h.Store))
+    reqEvent.Id = h.GetBestID()
 
     // Add good data to the store
     h.Lock()
@@ -120,18 +119,6 @@ func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {
-    switch r.Method {
-    case http.MethodGet:
-        return h.Show(w, r, event)
-    case http.MethodPut:
-        return h.Update(w, r, event)
-    default:
-        return newHTTPError(
-            nil,
-            "method not allowed",
-            http.StatusMethodNotAllowed,
-        )
-    }
     // Get requested id from url parameter
     parts := strings.Split(r.URL.String(), "/")
     if len(parts) != 3 {
@@ -140,7 +127,7 @@ func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {
     id := parts[2]
 
     h.Lock()
-    event, ok := h.FindWithID(id)
+    index, ok := h.GetEventIndex(id)
     h.Unlock()
     if !ok {
         return newHTTPError(
@@ -152,9 +139,11 @@ func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {
 
     switch r.Method {
     case http.MethodGet:
-        return h.Show(w, r, event)
+        return h.Show(w, r, index)
     case http.MethodPut:
-        return h.Update(w, r, event)
+        return h.Update(w, r, index)
+    case http.MethodDelete:
+        return h.Delete(w, r, index)
     default:
         return newHTTPError(
             nil,
@@ -164,8 +153,8 @@ func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {
     }
 }
 
-func (h *eventHandler) Show(w http.ResponseWriter, r *http.Request, e Event) error {
-    jsonData, err := json.Marshal(e)
+func (h *eventHandler) Show(w http.ResponseWriter, r *http.Request, i int) error {
+    jsonData, err := json.Marshal(h.Store[i])
     if err != nil {
         return newHTTPError(
             err,
@@ -180,7 +169,7 @@ func (h *eventHandler) Show(w http.ResponseWriter, r *http.Request, e Event) err
     return nil
 }
 
-func (h *eventHandler) Update(w http.ResponseWriter, r *http.Request, e Event) error {
+func (h *eventHandler) Update(w http.ResponseWriter, r *http.Request, i int) error {
     user, pass, ok := r.BasicAuth()
     if !ok || user != "hubdc-admin" || pass != h.Password {
         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
@@ -207,15 +196,38 @@ func (h *eventHandler) Update(w http.ResponseWriter, r *http.Request, e Event) e
         return err
     }
 
-    intId, _ := strconv.Atoi(e.Id)
+    reqEvent.Id = h.Store[i].Id
 
     h.Lock()
-    h.Store[intId].When = reqEvent.When
-    h.Store[intId].Where = reqEvent.Where
-    h.Store[intId].What = reqEvent.What
+    h.Store[i] = reqEvent
     defer h.Unlock()
 
+    // serialise...
+    // babez
     err = h.SerialiseBaby()
+    if err != nil {
+        return err
+    }
+    w.WriteHeader(http.StatusOK)
+    return nil
+}
+
+func (h *eventHandler) Delete(w http.ResponseWriter, r *http.Request, i int) error {
+    // Obviously auth is required
+    // Can't go willy-nilly deleting muh events
+    user, pass, ok := r.BasicAuth()
+    if !ok || user != "hubdc-admin" || pass != h.Password {
+        return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
+    }
+
+    // THE DELETE GOES brrrrr
+    h.Store = append(h.Store[:i], h.Store[i+1:]...)
+
+    // SERIALISE
+    //
+    // BABY
+    // OH PLEASE SWEET BABY SERIALISE ME
+    err := h.SerialiseBaby()
     if err != nil {
         return err
     }
