@@ -221,13 +221,10 @@ func (h *eventHandler) Delete(w http.ResponseWriter, r *http.Request, i int) err
         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
     }
 
-    // THE DELETE GOES brrrrr
+    // DELETE GOES brrrrr
     h.Store = append(h.Store[:i], h.Store[i+1:]...)
 
     // SERIALISE
-    //
-    // BABY
-    // OH PLEASE SWEET BABY SERIALISE ME
     err := h.SerialiseBaby()
     if err != nil {
         return err
@@ -252,6 +249,18 @@ func (h *eventHandler) ServeUpcoming(w http.ResponseWriter, r *http.Request) err
     return nil
 }
 
+// To lock off sections of website that require API authorisation
+func (h *eventHandler) AuthTest(w http.ResponseWriter, r *http.Request) error {
+    user, pass, ok := r.BasicAuth()
+    if !ok || user != h.Username || pass != h.Password {
+        return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("yippee"))
+    return nil
+}
+
 func main() {
     h := newEventHandler()
     // Index and create routes
@@ -260,6 +269,8 @@ func main() {
     http.Handle("/event/", rootHandler(h.Event))
     // Helper route for getting array of next three events
     http.Handle("/events/upcoming", rootHandler(h.ServeUpcoming))
+    // Returns hooray if auth is OK
+    http.Handle("/authtest", rootHandler(h.AuthTest))
 
     // heroku uses $PORT for port so if present use it
     // if not use 8080 for local development
