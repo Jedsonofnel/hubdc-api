@@ -7,6 +7,7 @@ import(
     "io/ioutil"
     "strings"
     "fmt"
+    "os"
 )
 
 // Wrapper around handlers that deals with errors
