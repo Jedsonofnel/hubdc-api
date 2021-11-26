@@ -259,5 +259,14 @@ func main() {
     http.Handle("/event/", rootHandler(h.Event))
     // Helper route for getting array of next three events
     http.Handle("/events/upcoming", rootHandler(h.ServeUpcoming))
-    log.Fatal(http.ListenAndServe(":8080", nil))
+
+    // heroku uses $PORT for port so if present use it
+    // if not use 8080 for local development
+    port := os.Getenv("PORT")
+    if port == "" {
+        log.Println("$PORT not set - using :8080 for local development")
+        port = "8080"
+    }
+    port = ":" + port
+    log.Fatal(http.ListenAndServe(port, nil))
 }
