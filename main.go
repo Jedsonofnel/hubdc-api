@@ -77,7 +77,7 @@ func (h *eventHandler) Index(w http.ResponseWriter, r *http.Request) error {
 
 func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
     user, pass, ok := r.BasicAuth()
-    if !ok || user != "hubdc-admin" || pass != h.Password {
+    if !ok || user != h.Username || pass != h.Password {
         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
     }
 
@@ -171,7 +171,7 @@ func (h *eventHandler) Show(w http.ResponseWriter, r *http.Request, i int) error
 
 func (h *eventHandler) Update(w http.ResponseWriter, r *http.Request, i int) error {
     user, pass, ok := r.BasicAuth()
-    if !ok || user != "hubdc-admin" || pass != h.Password {
+    if !ok || user != h.Username || pass != h.Password {
         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
     }
 
@@ -216,7 +216,7 @@ func (h *eventHandler) Delete(w http.ResponseWriter, r *http.Request, i int) err
     // Obviously auth is required
     // Can't go willy-nilly deleting muh events
     user, pass, ok := r.BasicAuth()
-    if !ok || user != "hubdc-admin" || pass != h.Password {
+    if !ok || user != h.Username || pass != h.Password {
         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
     }
 

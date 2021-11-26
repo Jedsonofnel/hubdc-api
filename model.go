@@ -23,6 +23,7 @@ type eventHandler struct {
     Store       []Event `json:"store"`
     StoreFile   string  `json:"-"`
     Password    string  `json:"-"`
+    Username    string  `json:"-"`
 }
 
 func newEventHandler() *eventHandler {
@@ -45,6 +46,7 @@ func newEventHandler() *eventHandler {
         panic("required env var ADMIN_PASSWORD not set")
     }
     e.Password = password
+    e.Username = "hubdc-admin"
 
     return &e
 }
