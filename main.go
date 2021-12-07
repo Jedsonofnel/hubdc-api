@@ -17,6 +17,7 @@ type rootHandler func(http.ResponseWriter, *http.Request) error
 func (fn rootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     err := fn(w, r)
     if err == nil {
+        w.Header().Add("Access-Control-Allow-Origin", "http://www.hubdc.info")
         return
     }
     // Error handling logic starts here:
