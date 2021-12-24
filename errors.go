@@ -3,6 +3,7 @@ package main
 import (
     "encoding/json"
     "fmt"
+    "net/http"
 )
 
 type ClientError interface {
@@ -44,5 +45,13 @@ func newHTTPError(err error, detail string, status int) error {
         Cause:  err,
         Detail: detail,
         Status: status,
+    }
+}
+
+func sqlError(e error) error {
+    return &HTTPError{
+        Cause: e,
+        Detail: "error fetching event data",
+        Status: http.StatusInternalServerError,
     }
 }
