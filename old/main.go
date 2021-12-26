@@ -4,7 +4,7 @@ import(
     "net/http"
     "encoding/json"
     "log"
-    // "io/ioutil"
+    "io/ioutil"
     // "strings"
     "fmt"
     "os"
@@ -91,49 +91,45 @@ func (h *eventHandler) Index(w http.ResponseWriter, r *http.Request) error {
     return nil
 }
 
-// TODO Rewrite this with sql
-// func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
-//     user, pass, ok := r.BasicAuth()
-//     if !ok || user != h.Username || pass != h.Password {
-//         return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
-//     }
-//
-//     bodyBytes, err := ioutil.ReadAll(r.Body)
-//     defer r.Body.Close()
-//     if err != nil {
-//         return newHTTPError(err, "error reading request", http.StatusInternalServerError)
-//     }
-//
-//     ct := r.Header.Get("content-type")
-//     if ct != "application/json" {
-//         return newHTTPError(err, "need content-type: application/json", http.StatusBadRequest)
-//     }
-//
-//     var reqEvent Event
-//     err = json.Unmarshal(bodyBytes, &reqEvent)
-//     if err != nil {
-//         return newHTTPError(err, "error parsing json", http.StatusBadRequest)
-//     }
-//
-//     if err, ok := validEvent(reqEvent); !ok {
-//         return err
-//     }
-//
-//     reqEvent.Id = h.GetBestID()
-//
-//     // Add good data to the store
-//     h.Lock()
-//     defer h.Unlock()
-//     h.Store = append(h.Store, reqEvent)
-//
-//     // Serialise Baby
-//     err = h.SerialiseBaby()
-//     if err != nil {
-//         return err
-//     }
-//     w.WriteHeader(http.StatusOK)
-//     return nil
-// }
+func (h *eventHandler) Create(w http.ResponseWriter, r *http.Request) error {
+    user, pass, ok := r.BasicAuth()
+    if !ok || user != h.Username || pass != h.Password {
+        return newHTTPError(nil, "invalid authorisation", http.StatusUnauthorized)
+    }
+
+    bodyBytes, err := ioutil.ReadAll(r.Body)
+    defer r.Body.Close()
+    if err != nil {
+        return newHTTPError(err, "error reading request", http.StatusInternalServerError)
+    }
+
+    ct := r.Header.Get("content-type")
+    if ct != "application/json" {
+        return newHTTPError(err, "need content-type: application/json", http.StatusBadRequest)
+    }
+
+    var reqEvent Event
+    err = json.Unmarshal(bodyBytes, &reqEvent)
+    if err != nil {
+        return newHTTPError(err, "error parsing json", http.StatusBadRequest)
+    }
+
+    if err, ok := validEvent(reqEvent); !ok {
+        return newHTTPError(
+            err,
+            "time not in '15:04 02-01-06' format",
+            http.StatusBadRequest,
+        )
+    }
+
+    err = h.Insert(reqEvent)
+    if err != nil {
+        return sqlError(err)
+    }
+
+    w.WriteHeader(http.StatusOK)
+    return nil
+}
 
 // TODO Rewrite this with sql
 // func (h *eventHandler) Event(w http.ResponseWriter, r *http.Request) error {

@@ -6,7 +6,7 @@ import (
     "log"
     // "io/ioutil"
     // "sync"
-    // "time"
+    "time"
     // "net/http"
     // "strconv"
     "database/sql"
@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-    Id      int  `json:"id"`
+    Id      int     `json:"id"`
     When    string  `json:"when"`
     Where   string  `json:"where"`
     What    string  `json:"what"`
@@ -77,6 +77,32 @@ func newEventHandler() *eventHandler {
     return &e
 }
 
+func (h *eventHandler) Insert(e Event) error {
+    query := "INSERT INTO event(event_when, event_where, event_what) VALUES (?, ?, ?)"
+    stmt, err := h.Db.Prepare(query)
+    if err != nil {
+        return err
+    }
+
+    // JSON "time" is meant to be human readable and stored as string
+    // so it needs to be converted to time.Time to then be made into a
+    // timestamp
+    when, err := time.Parse("15:04 02-01-06", e.When)
+    if err != nil {
+        return err
+    }
+    res, err := stmt.Exec(when, e.Where, e.What)
+    if err != nil {
+        return err
+    }
+    rows, err := res.RowsAffected()
+    if err != nil {
+        return err
+    }
+    log.Printf("%d products created", rows)
+    return nil
+}
+
 // TODO Rewrite with new SQL system
 // func (e *Event) Time() time.Time {
 //     t, err := time.Parse("15:04 02-01-06", e.When)
@@ -86,16 +112,6 @@ func newEventHandler() *eventHandler {
 //     return t
 // }
 //
-// func (h *eventHandler) GetBestID() string {
-//     lowestId := 0
-//     for _, e := range h.Store {
-//         index, _ := strconv.Atoi(e.Id)
-//         if index <= lowestId {
-//             lowestId = index + 1
-//         }
-//     }
-//     return strconv.Itoa(lowestId)
-// }
 // func (h *eventHandler) SerialiseBaby() error {
 //     writeBytes, err := json.MarshalIndent(h, "", " ")
 //     if err != nil {
@@ -165,36 +181,31 @@ func newEventHandler() *eventHandler {
 //     }
 //     return 0, false
 // }
-//
-// func validEvent(reqEvent Event) (error, bool) {
-//     // Making sure all fields are entered
-//     missingFields := make([]string, 0)
-//     if reqEvent.When == "" {
-//         missingFields = append(missingFields, "when")
-//     }
-//     if reqEvent.Where == "" {
-//         missingFields = append(missingFields, "where")
-//     }
-//     if reqEvent.What == "" {
-//         missingFields = append(missingFields, "what")
-//     }
-//     if len(missingFields) != 0 {
-//         errString := "missing json fields: "
-//         for _, v := range missingFields {
-//             errString += v + " "
-//         }
-//         return newHTTPError(nil, errString, http.StatusBadRequest), false
-//     }
-//
-//     // Test whether "when" is in the correct format
-//     _, err := time.Parse("15:04 02-01-06", reqEvent.When)
-//     if err != nil {
-//         return newHTTPError(
-//             err,
-//             "time not in '15:04 02-01-06' format",
-//             http.StatusBadRequest,
-//         ),
-//         false
-//     }
-//     return nil, true
-// }
+
+func validEvent(reqEvent Event) (error, bool) {
+    // Making sure all fields are entered
+    missingFields := make([]string, 0)
+    if reqEvent.When == "" {
+        missingFields = append(missingFields, "when")
+    }
+    if reqEvent.Where == "" {
+        missingFields = append(missingFields, "where")
+    }
+    if reqEvent.What == "" {
+        missingFields = append(missingFields, "what")
+    }
+    if len(missingFields) != 0 {
+        errString := "missing json fields: "
+        for _, v := range missingFields {
+            errString += v + " "
+        }
+        return newHTTPError(nil, errString, http.StatusBadRequest), false
+    }
+
+    // Test whether "when" is in the correct format
+    _, err := time.Parse("15:04 02-01-06", reqEvent.When)
+    if err != nil {
+        return err, false
+    }
+    return nil, true
+}
