@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,10 +11,20 @@ import (
 
 	"github.com/Jedsonofnel/hubdc-api/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+    // create new logger using standard go logger
 	l := log.New(os.Stdout, "event-api", log.LstdFlags)
+
+    // godotenv for env files
+    if os.Getenv("APP_ENV") != "production" {
+        err := godotenv.Load()
+        if err != nil {
+            l.Fatal("Error loading .env file")
+        }
+    }
 
 	eh := handlers.NewEvents(l)
 
@@ -31,10 +42,8 @@ func main() {
     postRouter.HandleFunc("/events", eh.AddEvent)
     postRouter.Use(eh.MiddlewareEventValidation)
 
-	// sm.Handle("/events", eh)
-
 	s := &http.Server{
-		Addr:         ":9090",
+        Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
 		Handler:      sm,
         ErrorLog:     l,
 		IdleTimeout:  120 * time.Second,
