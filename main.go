@@ -21,14 +21,14 @@ func main() {
 	sm := mux.NewRouter()
 
     getRouter := sm.Methods(http.MethodGet).Subrouter()
-    getRouter.HandleFunc("/", eh.GetEvents)
+    getRouter.HandleFunc("/events", eh.GetEvents)
 
     putRouter := sm.Methods(http.MethodPut).Subrouter()
-    putRouter.HandleFunc("/{id:[0-9]+}", eh.UpdateEvent)
+    putRouter.HandleFunc("/event/{id:[0-9]+}", eh.UpdateEvent)
     putRouter.Use(eh.MiddlewareEventValidation)
 
     postRouter := sm.Methods(http.MethodPost).Subrouter()
-    postRouter.HandleFunc("/", eh.AddEvent)
+    postRouter.HandleFunc("/events", eh.AddEvent)
     postRouter.Use(eh.MiddlewareEventValidation)
 
 	// sm.Handle("/events", eh)

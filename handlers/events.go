@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -68,6 +69,18 @@ func (e Events) MiddlewareEventValidation(next http.Handler) http.Handler {
             return
         }
 
+        // validate json
+        err = event.Validate()
+        if err != nil {
+            http.Error(
+                rw,
+                fmt.Sprintf("Error validating product %s", err),
+                http.StatusBadRequest,
+            )
+            return
+        }
+
+        // use context to send worked data to next handler
         ctx := context.WithValue(r.Context(), KeyEvent{}, event)
         req := r.WithContext(ctx)
 
