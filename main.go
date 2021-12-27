@@ -33,6 +33,7 @@ func main() {
 
     getRouter := sm.Methods(http.MethodGet).Subrouter()
     getRouter.HandleFunc("/events", eh.GetEvents)
+    getRouter.HandleFunc("/event/{id:[0-9]+}", eh.GetEvent)
 
     putRouter := sm.Methods(http.MethodPut).Subrouter()
     putRouter.HandleFunc("/event/{id:[0-9]+}", eh.UpdateEvent)

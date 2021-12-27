@@ -23,6 +23,11 @@ func (e *Events) ToJSON(w io.Writer) error {
     return enc.Encode(e)
 }
 
+func (e *Event) ToJSON(w io.Writer) error {
+    enc := json.NewEncoder(w)
+    return enc.Encode(e)
+}
+
 func (e *Event) FromJSON(r io.Reader) error {
     d := json.NewDecoder(r)
     return d.Decode(e)
@@ -48,6 +53,14 @@ func validateWhen(fl validator.FieldLevel) bool {
 
 func GetEvents() Events {
     return eventList
+}
+
+func GetEvent(id int) (*Event, error) {
+    e, _, err := findEvent(id)
+    if err != nil {
+        return nil, err
+    }
+    return e, nil
 }
 
 func AddEvent(e *Event) {

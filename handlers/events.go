@@ -27,6 +27,27 @@ func (e Events) GetEvents(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func(e Events) GetEvent(rw http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    id, err := strconv.Atoi(vars["id"])
+    if err != nil {
+        http.Error(rw, "Unable to convert id", http.StatusBadRequest)
+        return
+    }
+
+    le, err := data.GetEvent(id)
+    if err != nil{
+        http.Error(rw, "Event not found", http.StatusNotFound)
+        return
+    }
+
+    err = le.ToJSON(rw)
+	if err != nil {
+		http.Error(rw, "Unable to marshall json", http.StatusInternalServerError)
+        return
+	}
+}
+
 func (e *Events) AddEvent(rw http.ResponseWriter, r *http.Request) {
     e.l.Println("Handle POST Event")
 
