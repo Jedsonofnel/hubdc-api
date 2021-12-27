@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/Jedsonofnel/hubdc-api/handlers"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/Jedsonofnel/hubdc-api/handlers"
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -15,12 +17,26 @@ func main() {
 
 	eh := handlers.NewEvents(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", eh)
+    // create a new servemux using gorilla/mux
+	sm := mux.NewRouter()
+
+    getRouter := sm.Methods(http.MethodGet).Subrouter()
+    getRouter.HandleFunc("/", eh.GetEvents)
+
+    putRouter := sm.Methods(http.MethodPut).Subrouter()
+    putRouter.HandleFunc("/{id:[0-9]+}", eh.UpdateEvent)
+    putRouter.Use(eh.MiddlewareEventValidation)
+
+    postRouter := sm.Methods(http.MethodPost).Subrouter()
+    postRouter.HandleFunc("/", eh.AddEvent)
+    postRouter.Use(eh.MiddlewareEventValidation)
+
+	// sm.Handle("/events", eh)
 
 	s := &http.Server{
 		Addr:         ":9090",
 		Handler:      sm,
+        ErrorLog:     l,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 1 * time.Second,
