@@ -1,113 +1,111 @@
 package data
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
+	"database/sql"
 	"time"
 
-	"github.com/go-playground/validator/v10"
+	_ "github.com/lib/pq"
 )
+
+// For quick use when pushing strings up to database expecting time.Time
+type stringTime string
+
+func (st stringTime) timeConv() time.Time {
+    t, _ := time.Parse("15:04 02-01-06", string(st))
+    return t
+}
+
+func (st *stringTime) parse(t time.Time) {
+    *st = stringTime(t.Format("15:04 02-01-06"))
+}
 
 type Event struct {
     ID      int     `json:"id"`
     What    string  `json:"what" validate:"required"`
-    Where   string  `json:"where" validate:"required"`
-    When    string  `json:"when" validate:"required,when"`
+    Loc     string  `json:"loc" validate:"required"`
+    When    stringTime  `json:"when" validate:"required,when"`
 }
 
 type Events []*Event
 
-func (e *Events) ToJSON(w io.Writer) error {
-    enc := json.NewEncoder(w)
-    return enc.Encode(e)
+type EventStore struct {
+    DB *sql.DB
 }
 
-func (e *Event) ToJSON(w io.Writer) error {
-    enc := json.NewEncoder(w)
-    return enc.Encode(e)
-}
-
-func (e *Event) FromJSON(r io.Reader) error {
-    d := json.NewDecoder(r)
-    return d.Decode(e)
-}
-
-func (e *Event) Validate() error {
-    validate := validator.New()
-    validate.RegisterValidation("when", validateWhen)
-    return validate.Struct(e)
-}
-
-func validateWhen(fl validator.FieldLevel) bool {
-    // when is of format 15:04 02-01-06
-    whenFmt := "15:04 02-01-06"
-    _, err := time.Parse(whenFmt, fl.Field().String())
-
+func NewEventStore(url string) (EventStore, error) {
+    var es EventStore
+    db, err := sql.Open("postgres", url)
     if err != nil {
-        return false
+        return EventStore{}, err
+    }
+    es.DB = db
+
+    err = es.DB.Ping()
+    if err != nil {
+        return EventStore{}, err
     }
 
-    return true
+    _, err = es.DB.Exec(createEventTable)
+    if err != nil {
+        return EventStore{}, err
+    }
+
+    return es, nil
 }
 
-func GetEvents() Events {
-    return eventList
-}
-
-func GetEvent(id int) (*Event, error) {
-    e, _, err := findEvent(id)
+func (es *EventStore) GetEvents() (Events, error) {
+    rows, err := es.DB.Query(listEvents)
     if err != nil {
         return nil, err
     }
-    return e, nil
-}
-
-func AddEvent(e *Event) {
-    e.ID = getNextID()
-    eventList = append(eventList, e)
-}
-
-func UpdateEvent(id int, e *Event) error {
-    _, pos, err := findEvent(id)
-    if err != nil {
-        return err
-    }
-
-    e.ID = id
-    eventList[pos] = e
-
-    return nil
-}
-
-var ErrEventNotFound = fmt.Errorf("Event not found")
-
-func findEvent(id int) (*Event, int, error) {
-    for i, e := range eventList {
-        if e.ID == id {
-            return e, i, nil
+    defer rows.Close()
+    var events Events
+    for rows.Next() {
+        var e Event
+        var et time.Time
+        if err := rows.Scan(&e.ID, &e.What, &e.Loc, &et); err != nil {
+            return nil, err
         }
+        e.When.parse(et)
+        events = append(events, &e)
     }
-
-    return nil, -1, ErrEventNotFound
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+    return events, nil
 }
 
-func getNextID() int {
-    le := eventList[len(eventList)-1]
-    return le.ID + 1
+func (es *EventStore) GetEvent(id int) (*Event, error) {
+    row := es.DB.QueryRow(getEvent, id)
+    var e Event
+    var et time.Time
+    err := row.Scan(&e.ID, &e.What, &e.Loc, &et)
+    e.When.parse(et)
+    return &e ,err
 }
 
-var eventList = []*Event{
-    {
-        ID: 1,
-        What: "Normal Hub Session",
-        Where: "HPH",
-        When: "17:15 15-01-22",
-    },
-    {
-        ID: 2,
-        What: "Lent Addresses",
-        Where: "Chapel Close",
-        When: "16:30 22-02-22",
-    },
+func (es *EventStore) CreateEvent(e *Event) (*Event, error) {
+	row := es.DB.QueryRow(createEvent, e.What, e.Loc, e.When.timeConv())
+	var re Event
+    var et time.Time
+	err := row.Scan(&re.ID, &re.What, &re.Loc, &et)
+    re.When.parse(et)
+	return &re, err
+}
+
+func (es *EventStore) UpdateEvent(id int, e *Event) (*Event, error) {
+	row := es.DB.QueryRow(updateEvent, e.What, e.Loc, e.What, id)
+	var re Event
+    var et time.Time
+	err := row.Scan(&e.ID, &re.What, &re.Loc, &et)
+    re.When.parse(et)
+	return &re, err
+}
+
+func (es *EventStore) DeleteEvent(id int) error {
+    _, err := es.DB.Exec(deleteEvent, id)
+    return err
 }

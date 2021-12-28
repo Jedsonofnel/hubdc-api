@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/Jedsonofnel/hubdc-api/data"
 	"github.com/Jedsonofnel/hubdc-api/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -18,7 +19,7 @@ func main() {
     // create new logger using standard go logger
 	l := log.New(os.Stdout, "event-api", log.LstdFlags)
 
-    // godotenv for env files
+    // godotenv for env file
     if os.Getenv("APP_ENV") != "production" {
         err := godotenv.Load()
         if err != nil {
@@ -26,22 +27,30 @@ func main() {
         }
     }
 
-	eh := handlers.NewEvents(l)
+    es, err := data.NewEventStore(os.Getenv("DATABASE_URL"))
+    if err != nil {
+        l.Fatal("Error connecting to database: ", err)
+    }
+
+	eh := handlers.NewEvents(l, es)
 
     // create a new servemux using gorilla/mux
 	sm := mux.NewRouter()
 
     getRouter := sm.Methods(http.MethodGet).Subrouter()
-    getRouter.HandleFunc("/events", eh.GetEvents)
-    getRouter.HandleFunc("/event/{id:[0-9]+}", eh.GetEvent)
+    getRouter.HandleFunc("/events", eh.Index)
+    getRouter.HandleFunc("/event/{id:[0-9]+}", eh.Show)
 
     putRouter := sm.Methods(http.MethodPut).Subrouter()
-    putRouter.HandleFunc("/event/{id:[0-9]+}", eh.UpdateEvent)
+    putRouter.HandleFunc("/event/{id:[0-9]+}", eh.Update)
     putRouter.Use(eh.MiddlewareEventValidation)
 
     postRouter := sm.Methods(http.MethodPost).Subrouter()
-    postRouter.HandleFunc("/events", eh.AddEvent)
+    postRouter.HandleFunc("/events", eh.Create)
     postRouter.Use(eh.MiddlewareEventValidation)
+
+    deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+    deleteRouter.HandleFunc("/event/{id:[0-9]+}", eh.Delete)
 
 	s := &http.Server{
         Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
