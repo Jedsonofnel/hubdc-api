@@ -58,6 +58,7 @@ func main() {
 
     deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
     deleteRouter.HandleFunc("/event/{id:[0-9]+}", eh.Delete)
+    deleteRouter.Use(ah.MiddlewareAuth)
 
 	s := &http.Server{
         Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
