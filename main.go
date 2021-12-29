@@ -17,7 +17,7 @@ import (
 
 func main() {
     // create new logger using standard go logger
-	l := log.New(os.Stdout, "event-api", log.LstdFlags)
+    l := log.New(os.Stdout, "event-api: ", log.LstdFlags)
 
     // godotenv for env file
     if os.Getenv("APP_ENV") != "production" {
@@ -32,7 +32,11 @@ func main() {
         l.Fatal("Error connecting to database: ", err)
     }
 
+    // create a new event handler
 	eh := handlers.NewEvents(l, es)
+
+    // create a new auth handler
+    ah := handlers.NewAuth(l)
 
     // create a new servemux using gorilla/mux
 	sm := mux.NewRouter()
@@ -40,13 +44,16 @@ func main() {
     getRouter := sm.Methods(http.MethodGet).Subrouter()
     getRouter.HandleFunc("/events", eh.Index)
     getRouter.HandleFunc("/event/{id:[0-9]+}", eh.Show)
+    getRouter.HandleFunc("/login", ah.Login)
 
     putRouter := sm.Methods(http.MethodPut).Subrouter()
     putRouter.HandleFunc("/event/{id:[0-9]+}", eh.Update)
+    putRouter.Use(ah.MiddlewareAuth)
     putRouter.Use(eh.MiddlewareEventValidation)
 
     postRouter := sm.Methods(http.MethodPost).Subrouter()
     postRouter.HandleFunc("/events", eh.Create)
+    postRouter.Use(ah.MiddlewareAuth)
     postRouter.Use(eh.MiddlewareEventValidation)
 
     deleteRouter := sm.Methods(http.MethodDelete).Subrouter()

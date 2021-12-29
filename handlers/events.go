@@ -21,7 +21,8 @@ func NewEvents(l *log.Logger, s data.EventStore) *Events {
 }
 
 func (e Events) Index(rw http.ResponseWriter, r *http.Request) {
-    e.l.Println("Handle GET Event")
+    e.l.Println("handle INDEX request")
+
 	le, err := e.s.GetEvents()
     if err != nil {
         http.Error(rw, "Error accessing database", http.StatusInternalServerError)
@@ -35,7 +36,7 @@ func (e Events) Index(rw http.ResponseWriter, r *http.Request) {
 }
 
 func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
-    e.l.Println("Handle GET Event")
+    e.l.Println("handle SHOW request")
 
     vars := mux.Vars(r)
     id, err := strconv.Atoi(vars["id"])
@@ -59,7 +60,7 @@ func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Events) Create(rw http.ResponseWriter, r *http.Request) {
-    e.l.Println("Handle POST Event")
+    e.l.Println("handle CREATE request")
 
     event :=r.Context().Value(KeyEvent{}).(*data.Event)
     ret, err := e.s.CreateEvent(event)
@@ -77,7 +78,7 @@ func (e *Events) Create(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
-    e.l.Println("Handle PUT Event")
+    e.l.Println("handle UPDATE request")
     vars := mux.Vars(r)
     id, err := strconv.Atoi(vars["id"])
     if err != nil {
@@ -103,7 +104,7 @@ func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (e Events) Delete(rw http.ResponseWriter, r *http.Request) {
-    e.l.Println("Handle DELETE Event")
+    e.l.Println("handle DELETE request")
     vars := mux.Vars(r)
     id, err := strconv.Atoi(vars["id"])
     if err != nil {
