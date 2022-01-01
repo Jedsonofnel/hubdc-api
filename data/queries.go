@@ -41,3 +41,10 @@ SET what = $1,
 WHERE id = $4
 RETURNING *
 `
+
+const getUpcomingEvents = `-- name: getUpcomingEvents :many
+SELECT * FROM event
+WHERE "when" >= now()::date
+ORDER BY "when"
+LIMIT 3
+`

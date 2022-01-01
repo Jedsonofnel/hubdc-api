@@ -78,6 +78,31 @@ func (es *EventStore) GetEvents() (Events, error) {
     return events, nil
 }
 
+func (es *EventStore) GetUpcomingEvents() (Events, error) {
+    rows, err := es.DB.Query(getUpcomingEvents)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    var events Events
+    for rows.Next() {
+        var e Event
+        var et time.Time
+        if err := rows.Scan(&e.ID, &e.What, &e.Loc, &et); err != nil {
+            return nil, err
+        }
+        e.When.parse(et)
+        events = append(events, &e)
+    }
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+    return events, nil
+}
+
 func (es *EventStore) GetEvent(id int) (*Event, error) {
     row := es.DB.QueryRow(getEvent, id)
     var e Event

@@ -43,6 +43,7 @@ func main() {
 
     getRouter := sm.Methods(http.MethodGet).Subrouter()
     getRouter.HandleFunc("/events", eh.Index)
+    getRouter.HandleFunc("/events/upcoming", eh.Upcoming)
     getRouter.HandleFunc("/event/{id:[0-9]+}", eh.Show)
     getRouter.HandleFunc("/login", ah.Login)
 

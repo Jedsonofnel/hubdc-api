@@ -31,8 +31,24 @@ func (e Events) Index(rw http.ResponseWriter, r *http.Request) {
     rw.Header().Add("content-type", "application/json; charset=utf-8")
 	err = le.ToJSON(rw)
 	if err != nil {
-		http.Error(rw, "Unable to marshall json", http.StatusInternalServerError)
+		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
 	}
+}
+
+func (e Events) Upcoming(rw http.ResponseWriter, r *http.Request) {
+    e.l.Println("handle UPCOMING request")
+
+    le, err := e.s.GetUpcomingEvents()
+    if err != nil   {
+        e.l.Println(err)
+        http.Error(rw, "Error accessing database", http.StatusInternalServerError)
+    }
+
+    rw.Header().Add("content-type", "application/json; charset=utf-8")
+    err = le.ToJSON(rw)
+    if err != nil {
+        http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
+    }
 }
 
 func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
