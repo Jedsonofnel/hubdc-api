@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"time"
 
+    gohandlers "github.com/gorilla/handlers"
 	"github.com/Jedsonofnel/hubdc-api/data"
 	"github.com/Jedsonofnel/hubdc-api/handlers"
 	"github.com/gorilla/mux"
@@ -45,7 +46,6 @@ func main() {
     getRouter.HandleFunc("/events", eh.Index)
     getRouter.HandleFunc("/events/upcoming", eh.Upcoming)
     getRouter.HandleFunc("/event/{id:[0-9]+}", eh.Show)
-    getRouter.HandleFunc("/login", ah.Login)
 
     putRouter := sm.Methods(http.MethodPut).Subrouter()
     putRouter.HandleFunc("/event/{id:[0-9]+}", eh.Update)
@@ -61,9 +61,16 @@ func main() {
     deleteRouter.HandleFunc("/event/{id:[0-9]+}", eh.Delete)
     deleteRouter.Use(ah.MiddlewareAuth)
 
+    loginRouter := sm.Methods(http.MethodPost).Subrouter()
+    loginRouter.HandleFunc("/login", ah.Login)
+
+
+    // CORS stuff
+    ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"*"}))
+
 	s := &http.Server{
         Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler:      sm,
+		Handler:      ch(sm),
         ErrorLog:     l,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
