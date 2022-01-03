@@ -43,21 +43,28 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
         return
     }
 
-    adminJWT, err := a.generateJWT()
+    adminJWT, _, err := a.generateJWT()
     if err != nil {
         http.Error(rw, "error generating jwt", http.StatusInternalServerError)
     }
-    rw.Header().Add("access_token", adminJWT)
+
+    rw.Header().Add("Access_token", adminJWT)
 }
 
 func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
     return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-        if r.Header["Authorization"] == nil {
-            http.Error(rw, "no jwt found", http.StatusUnauthorized)
-            return
+        c, err := r.Cookie("token")
+        if err != nil {
+            if err == http.ErrNoCookie {
+                http.Error(rw, "No JWT cookie", http.StatusUnauthorized)
+                return
+            }
+            http.Error(rw, "error getting cookie", http.StatusBadRequest)
         }
 
-        token, err := jwt.Parse(r.Header["Authorization"][0], func(token *jwt.Token) (interface{}, error) {
+        tknStr := c.Value
+
+        token, err := jwt.Parse(tknStr, func(token *jwt.Token) (interface{}, error) {
             if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
                 return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
             }
@@ -78,17 +85,18 @@ func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
     })
 }
 
-func (a Auth) generateJWT() (string, error) {
+func (a Auth) generateJWT() (string, time.Time, error) {
+    expTime := time.Now().Add(time.Hour * 1)
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
         "user": "HCM",
-        "exp": time.Now().Add(time.Hour * 1).Unix(),
+        "exp": expTime.Unix(),
     })
 
     tokenString, err := token.SignedString([]byte(os.Getenv("HMACSECRET")))
     if err != nil {
         a.l.Printf("error generating tokenstring: %s", err)
-        return "", err
+        return "", time.Now(), err
     }
 
-    return tokenString, nil
+    return tokenString, expTime, nil
 }

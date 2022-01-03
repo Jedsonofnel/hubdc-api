@@ -9,11 +9,11 @@ import (
 	"os/signal"
 	"time"
 
-    gohandlers "github.com/gorilla/handlers"
 	"github.com/Jedsonofnel/hubdc-api/data"
 	"github.com/Jedsonofnel/hubdc-api/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -64,13 +64,19 @@ func main() {
     loginRouter := sm.Methods(http.MethodPost).Subrouter()
     loginRouter.HandleFunc("/login", ah.Login)
 
+    c := cors.New(cors.Options{
+        AllowedOrigins: []string{"http://localhost:3000", "http://www.hubdc.info"},
+        AllowCredentials: true,
+        AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowedHeaders: []string{"*"},
+        ExposedHeaders: []string{"Access_token"},
+    })
 
-    // CORS stuff
-    ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"*"}))
+    ch := c.Handler(sm)
 
 	s := &http.Server{
         Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler:      ch(sm),
+		Handler:      ch,
         ErrorLog:     l,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
