@@ -53,16 +53,11 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
 
 func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
     return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-        c, err := r.Cookie("token")
-        if err != nil {
-            if err == http.ErrNoCookie {
-                http.Error(rw, "No JWT cookie", http.StatusUnauthorized)
-                return
-            }
-            http.Error(rw, "error getting cookie", http.StatusBadRequest)
+        tknStr := r.Header.Get("Authorization")
+        if tknStr == "" {
+            http.Error(rw, "No Authorization header set", http.StatusUnauthorized)
+            return
         }
-
-        tknStr := c.Value
 
         token, err := jwt.Parse(tknStr, func(token *jwt.Token) (interface{}, error) {
             if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
