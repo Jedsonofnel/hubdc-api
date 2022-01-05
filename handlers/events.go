@@ -106,7 +106,7 @@ func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
 
     ret, err := e.s.UpdateEvent(id, event)
     if err != nil {
-        http.Error(rw, "Event not found", http.StatusInternalServerError)
+        http.Error(rw, "Error updating events", http.StatusInternalServerError)
         return
     }
 

@@ -122,10 +122,10 @@ func (es *EventStore) CreateEvent(e *Event) (*Event, error) {
 }
 
 func (es *EventStore) UpdateEvent(id int, e *Event) (*Event, error) {
-	row := es.DB.QueryRow(updateEvent, e.What, e.Loc, e.What, id)
+	row := es.DB.QueryRow(updateEvent, e.What, e.Loc, e.When.timeConv(), id)
 	var re Event
     var et time.Time
-	err := row.Scan(&e.ID, &re.What, &re.Loc, &et)
+	err := row.Scan(&re.ID, &re.What, &re.Loc, &et)
     re.When.parse(et)
 	return &re, err
 }
