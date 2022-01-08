@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -148,13 +147,15 @@ func (e Events) MiddlewareEventValidation(next http.Handler) http.Handler {
         }
 
         // validate json
-        err = event.Validate()
-        if err != nil {
-            http.Error(
-                rw,
-                fmt.Sprintf("Error validating product %s", err),
-                http.StatusBadRequest,
-            )
+        errs := event.Validate()
+        if len(errs) != 0 {
+            rw.Header().Add("content-type", "application/json; charset=utf-8")
+            err = errs.ToJSON(rw)
+            if err != nil {
+                e.l.Printf("Error jsoning erros: %v", err)
+                http.Error(rw, "Error parsing errors lol", http.StatusInternalServerError)
+                return
+            }
             return
         }
 

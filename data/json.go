@@ -3,9 +3,6 @@ package data
 import (
 	"encoding/json"
 	"io"
-	"time"
-
-	"github.com/go-playground/validator/v10"
 )
 
 func (e Events) ToJSON(w io.Writer) error {
@@ -23,20 +20,21 @@ func (e *Event) FromJSON(r io.Reader) error {
     return d.Decode(e)
 }
 
-func (e *Event) Validate() error {
-    validate := validator.New()
-    validate.RegisterValidation("when", validateWhen)
-    return validate.Struct(e)
+type JSONErrs []error
+
+func (je JSONErrs) MarshalJSON() ([]byte, error) {
+    res := make([]interface{}, len(je))
+    for i, e := range je {
+        if _, ok := e.(json.Marshaler); ok {
+            res[i] = e
+        } else {
+            res[i] = e.Error()
+        }
+    }
+    return json.Marshal(res)
 }
 
-func validateWhen(fl validator.FieldLevel) bool {
-    // when is of format 15:04 02-01-06
-    whenFmt := "15:04 02-01-06"
-    _, err := time.Parse(whenFmt, fl.Field().String())
-
-    if err != nil {
-        return false
-    }
-
-    return true
+func (je JSONErrs) ToJSON(w io.Writer) error {
+    enc := json.NewEncoder(w)
+    return enc.Encode(je)
 }
