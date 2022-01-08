@@ -149,7 +149,8 @@ func (e Events) MiddlewareEventValidation(next http.Handler) http.Handler {
         // validate json
         errs := event.Validate()
         if len(errs) != 0 {
-            rw.Header().Add("content-type", "application/json; charset=utf-8")
+            rw.Header().Set("content-type", "application/json; charset=utf-8")
+            rw.WriteHeader(http.StatusBadRequest)
             err = errs.ToJSON(rw)
             if err != nil {
                 e.l.Printf("Error jsoning erros: %v", err)
