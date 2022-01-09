@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Jedsonofnel/hubdc-api/data"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
 )
@@ -20,7 +21,8 @@ func NewAuth(l *log.Logger) *Auth {
 }
 
 func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
-    a.l.Println("handle LOGIN request")
+    a.l.Println("Handling LOGIN request")
+
     username, password, ok := r.BasicAuth()
 
     // godotenv for env file
@@ -33,29 +35,51 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
 
     // is auth header in request?
     if !ok {
-        http.Error(rw, "no basic auth", http.StatusUnauthorized)
+        a.l.Printf("Error handling LOGIN request: No basic auth present")
+        a.JSONError(
+            rw,
+            data.NewJE("No basic auth set"),
+            http.StatusUnauthorized,
+        )
         return
     }
 
     // are the details correct?
     if username != os.Getenv("USERNAME") || password != os.Getenv("PASSWORD") {
-        http.Error(rw, "incorrect username or password", http.StatusForbidden)
+        a.l.Printf("Error handling LOGIN request: Incorrect username or password")
+        a.JSONError(
+            rw,
+            data.NewJE("Incorrect username or password"),
+            http.StatusForbidden,
+        )
         return
     }
 
     adminJWT, _, err := a.generateJWT()
     if err != nil {
-        http.Error(rw, "error generating jwt", http.StatusInternalServerError)
+        a.l.Printf("Error handling LOGIN request: %v", err)
+        a.JSONError(
+            rw,
+            data.NewJE("Error generating JWT"),
+            http.StatusInternalServerError,
+        )
+        return
     }
 
     rw.Header().Add("Access_token", adminJWT)
+    rw.WriteHeader(http.StatusOK)
 }
 
 func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
     return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
         tknStr := r.Header.Get("Authorization")
         if tknStr == "" {
-            http.Error(rw, "No Authorization header set", http.StatusUnauthorized)
+            a.l.Printf("Error authorizing request: No 'Authorization' header set")
+            a.JSONError(
+                rw,
+                data.NewJE("No 'Authorization' header set"),
+                http.StatusUnauthorized,
+            )
             return
         }
 
@@ -68,14 +92,25 @@ func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
         })
 
         if err != nil {
-            http.Error(rw, fmt.Sprintf("Error with jwt: %v", err), http.StatusForbidden)
+            a.l.Printf("Error authorizing request: %v", err)
+            a.JSONError(
+                rw,
+                data.NewJE(fmt.Sprintf("Error parsing JWT: %v", err)),
+                http.StatusForbidden,
+            )
             return
         }
 
         if token.Valid {
             next.ServeHTTP(rw, r)
         } else {
-            http.Error(rw, "JWT invalid", http.StatusForbidden)
+            a.l.Printf("Error authorizing request: JWT invalid")
+            a.JSONError(
+                rw,
+                data.NewJE("JWT invalid"),
+                http.StatusForbidden,
+            )
+            return
         }
     })
 }
@@ -89,7 +124,7 @@ func (a Auth) generateJWT() (string, time.Time, error) {
 
     tokenString, err := token.SignedString([]byte(os.Getenv("HMACSECRET")))
     if err != nil {
-        a.l.Printf("error generating tokenstring: %s", err)
+        a.l.Printf("Error generating tokenstring: %v", err)
         return "", time.Now(), err
     }
 
