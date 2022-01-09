@@ -27,7 +27,7 @@ func (e Events) Index(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling INDEX request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error accessing database"),
+            data.NewJEs("Error accessing database"),
             http.StatusInternalServerError,
         )
         return
@@ -40,7 +40,7 @@ func (e Events) Index(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling INDEX request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error marshaling data to JSON for response"),
+            data.NewJEs("Error marshaling data to JSON for response"),
             http.StatusInternalServerError,
         )
         return
@@ -55,7 +55,7 @@ func (e Events) Upcoming(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling UPCOMING request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error accessing database"),
+            data.NewJEs("Error accessing database"),
             http.StatusInternalServerError,
         )
         return
@@ -68,7 +68,7 @@ func (e Events) Upcoming(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling UPCOMING request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error marshaling data to JSON for response"),
+            data.NewJEs("Error marshaling data to JSON for response"),
             http.StatusInternalServerError,
         )
         return
@@ -84,7 +84,7 @@ func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling SHOW request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Unable to convert id to integer"),
+            data.NewJEs("Unable to convert id to integer"),
             http.StatusBadRequest,
         )
         return
@@ -95,7 +95,7 @@ func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling SHOW request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Event not found"),
+            data.NewJEs("Event not found"),
             http.StatusNotFound,
         )
         return
@@ -108,7 +108,7 @@ func(e Events) Show(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling SHOW request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error marshaling data to JSON for response"),
+            data.NewJEs("Error marshaling data to JSON for response"),
             http.StatusInternalServerError,
         )
         return
@@ -124,7 +124,7 @@ func (e *Events) Create(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling CREATE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error creating resource"),
+            data.NewJEs("Error creating resource"),
             http.StatusInternalServerError,
         )
         return
@@ -138,7 +138,7 @@ func (e *Events) Create(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling CREATE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error marshaling data to JSON for response"),
+            data.NewJEs("Error marshaling data to JSON for response"),
             http.StatusInternalServerError,
         )
         return
@@ -154,7 +154,7 @@ func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling UPDATE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Unable to convert id to int"),
+            data.NewJEs("Unable to convert id to int"),
             http.StatusBadRequest,
         )
         return
@@ -166,7 +166,7 @@ func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling UPDATE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error updating event"),
+            data.NewJEs("Error updating event"),
             http.StatusBadRequest,
         )
         return
@@ -179,7 +179,7 @@ func (e Events) Update(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling UPDATE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Error marshaling data to JSON for response"),
+            data.NewJEs("Error marshaling data to JSON for response"),
             http.StatusInternalServerError,
         )
         return
@@ -195,7 +195,7 @@ func (e Events) Delete(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling DELETE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Unable to convert id to int"),
+            data.NewJEs("Unable to convert id to int"),
             http.StatusBadRequest,
         )
         return
@@ -206,7 +206,7 @@ func (e Events) Delete(rw http.ResponseWriter, r *http.Request) {
         e.l.Printf("Error handling DELETE request: %v", err)
         e.JSONError(
             rw,
-            data.NewJE("Event not found"),
+            data.NewJEs("Event not found"),
             http.StatusNotFound,
         )
         return
@@ -223,7 +223,7 @@ func (e Events) MiddlewareEventValidation(next http.Handler) http.Handler {
         if err != nil {
             e.JSONError(
                 rw,
-                data.NewJE("Error marshaling data to JSON for response"),
+                data.NewJEs("Error marshaling data to JSON for response"),
                 http.StatusInternalServerError,
             )
             return
@@ -231,7 +231,7 @@ func (e Events) MiddlewareEventValidation(next http.Handler) http.Handler {
 
         // validate json
         errs := event.Validate()
-        if errs != nil {
+        if errs.Errors != nil {
             e.JSONError(
                 rw,
                 errs,

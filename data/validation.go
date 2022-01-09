@@ -17,20 +17,20 @@ func msgForTag(fe validator.FieldError) string {
     return fe.Error()
 }
 
-func (e *Event) Validate() []JSONError {
+func (e *Event) Validate() JSONErrors {
     validate := validator.New()
     validate.RegisterValidation("when", validateWhen)
 
     err := validate.Struct(e)
 
     if err == nil {
-        return nil
+        return JSONErrors{}
     }
 
 
-    var errs []JSONError
+    var errs JSONErrors
     for _, err := range err.(validator.ValidationErrors) {
-        errs = append(errs, NewJE(msgForTag(err)))
+        errs.Errors = append(errs.Errors, NewJE(msgForTag(err)))
     }
     return errs
 }

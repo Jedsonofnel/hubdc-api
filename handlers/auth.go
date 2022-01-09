@@ -38,7 +38,7 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
         a.l.Printf("Error handling LOGIN request: No basic auth present")
         a.JSONError(
             rw,
-            data.NewJE("No basic auth set"),
+            data.NewJEs("No basic auth set"),
             http.StatusUnauthorized,
         )
         return
@@ -49,7 +49,7 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
         a.l.Printf("Error handling LOGIN request: Incorrect username or password")
         a.JSONError(
             rw,
-            data.NewJE("Incorrect username or password"),
+            data.NewJEs("Incorrect username or password"),
             http.StatusForbidden,
         )
         return
@@ -60,7 +60,7 @@ func (a Auth) Login(rw http.ResponseWriter, r *http.Request) {
         a.l.Printf("Error handling LOGIN request: %v", err)
         a.JSONError(
             rw,
-            data.NewJE("Error generating JWT"),
+            data.NewJEs("Error generating JWT"),
             http.StatusInternalServerError,
         )
         return
@@ -77,7 +77,7 @@ func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
             a.l.Printf("Error authorizing request: No 'Authorization' header set")
             a.JSONError(
                 rw,
-                data.NewJE("No 'Authorization' header set"),
+                data.NewJEs("No 'Authorization' header set"),
                 http.StatusUnauthorized,
             )
             return
@@ -95,7 +95,7 @@ func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
             a.l.Printf("Error authorizing request: %v", err)
             a.JSONError(
                 rw,
-                data.NewJE(fmt.Sprintf("Error parsing JWT: %v", err)),
+                data.NewJEs(fmt.Sprintf("Error parsing JWT: %v", err)),
                 http.StatusForbidden,
             )
             return
@@ -107,7 +107,7 @@ func (a Auth) MiddlewareAuth(next http.Handler) http.Handler {
             a.l.Printf("Error authorizing request: JWT invalid")
             a.JSONError(
                 rw,
-                data.NewJE("JWT invalid"),
+                data.NewJEs("JWT invalid"),
                 http.StatusForbidden,
             )
             return
