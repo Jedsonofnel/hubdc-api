@@ -65,7 +65,7 @@ func main() {
     loginRouter.HandleFunc("/login", ah.Login)
 
     c := cors.New(cors.Options{
-        AllowedOrigins: []string{"http://localhost:3000", "http://www.hubdc.info"},
+        AllowedOrigins: []string{"http://localhost:3000", "https://www.hubdc.info"},
         AllowCredentials: true,
         AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
         AllowedHeaders: []string{"*"},
